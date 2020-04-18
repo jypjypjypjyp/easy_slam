@@ -1,0 +1,7 @@
+{
+    "python.pythonPath": "/home/jyp/.miniconda3/envs/learning/bin/python",
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+    "files.associations": {
+        "future": "cpp"
+    }
+}
