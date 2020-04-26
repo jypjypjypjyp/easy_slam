@@ -26,7 +26,9 @@ class Config {
     // access the parameter values
     template <typename T>
     static T Get(const std::string &key) {
-        return T(Config::config_->file_[key]);
+        T result;
+        Config::config_->file_[key] >> result;
+        return result;
     }
 };
 }  // namespace easy_slam

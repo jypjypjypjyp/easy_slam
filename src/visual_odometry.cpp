@@ -12,7 +12,7 @@ VisualOdometry::VisualOdometry(std::string &config_path)
 
 bool VisualOdometry::Init() {
     // read from config file
-    if (Config::SetParameterFile(config_file_path_) == false) {
+    if (!Config::SetParameterFile(config_file_path_)) {
         return false;
     }
 
