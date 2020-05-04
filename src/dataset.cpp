@@ -61,17 +61,11 @@ Frame::Ptr Dataset::NextFrame()
     {
         LOG(WARNING) << "cannot find images at index " << current_image_index_;
         return nullptr;
-    }
-
-    cv::Mat image_left_resized, image_right_resized;
-    cv::resize(image_left, image_left_resized, cv::Size(), 0.5, 0.5,
-               cv::INTER_NEAREST);
-    cv::resize(image_right, image_right_resized, cv::Size(), 0.5, 0.5,
-               cv::INTER_NEAREST);
+    } 
 
     auto new_frame = Frame::CreateFrame();
-    new_frame->left_img_ = image_left_resized;
-    new_frame->right_img_ = image_right_resized;
+    new_frame->left_img_ = image_left;
+    new_frame->right_img_ = image_right;
     current_image_index_++;
     return new_frame;
 }

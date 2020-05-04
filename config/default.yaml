@@ -1,28 +1,28 @@
 %YAML:1.0
 # data
 # the dataset directory, change it to yours! 
-dataset_dir: /media/jyp/Data/Datasets/kitti/2011_10_03/2011_10_03_drive_0042_sync
+dataset_dir: /media/jyp/Data/Datasets/kitti/2011_10_03/2011_10_03_drive_0027_sync
 
 # camera1 intrinsics
-camera1.fx: 9.799200e+02
-camera1.fy: 9.741183e+02
-camera1.cx: 6.900000e+02
-camera1.cy: 2.486443e+02
+camera1.fx: 7.188560000000e+02
+camera1.fy: 7.188560000000e+02
+camera1.cx: 6.071928000000e+02
+camera1.cy: 1.852157000000e+02
 
 # camera2 intrinsics
-camera2.fx: 9.799200e+02
-camera2.fy: 9.741183e+02
-camera2.cx: 6.900000e+02
-camera2.cy: 2.486443e+02
+camera2.fx: 7.188560000000e+02
+camera2.fy: 7.188560000000e+02
+camera2.cx: 6.071928000000e+02
+camera2.cy: 1.852157000000e+02
 
 # camera to camera
 cam0_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [9.993440e-01, 1.814887e-02, -3.134011e-02, -0.33908972,
-          -1.842595e-02, 9.997935e-01,-8.575221e-03, 0.74680282,
-          3.117801e-02, 9.147067e-03, 9.994720e-01, -1.09574845,
+   data: [1, 0, 0, -0.537165718864418,
+          0, 1, 0, 0,
+          0, 0, 1, 0,
           0, 0, 0, 1]
 
 num_features: 150

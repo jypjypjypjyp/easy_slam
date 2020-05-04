@@ -13,50 +13,61 @@
 #include "easy_slam/map.h"
 #include "easy_slam/viewer.h"
 
-namespace easy_slam {
+namespace easy_slam
+{
 
-Frontend::Frontend() {
+Frontend::Frontend()
+{
     gftt_ =
         cv::GFTTDetector::create(Config::Get<int>("num_features"), 0.01, 20);
     num_features_init_ = Config::Get<int>("num_features_init");
     num_features_ = Config::Get<int>("num_features");
 }
 
-bool Frontend::AddFrame(easy_slam::Frame::Ptr frame) {
+bool Frontend::AddFrame(easy_slam::Frame::Ptr frame)
+{
     current_frame_ = frame;
 
-    switch (status_) {
-        case FrontendStatus::INITING:
-            StereoInit();
-            break;
-        case FrontendStatus::TRACKING_GOOD:
-        case FrontendStatus::TRACKING_BAD:
-            Track();
-            break;
-        case FrontendStatus::LOST:
-            Reset();
-            break;
+    switch (status_)
+    {
+    case FrontendStatus::INITING:
+        StereoInit();
+        break;
+    case FrontendStatus::TRACKING_GOOD:
+    case FrontendStatus::TRACKING_BAD:
+        Track();
+        break;
+    case FrontendStatus::LOST:
+        Reset();
+        break;
     }
 
     last_frame_ = current_frame_;
     return true;
 }
 
-bool Frontend::Track() {
-    if (last_frame_) {
+bool Frontend::Track()
+{
+    if (last_frame_)
+    {
         current_frame_->SetPose(relative_motion_ * last_frame_->Pose());
     }
 
     int num_track_last = TrackLastFrame();
     tracking_inliers_ = EstimateCurrentPose();
 
-    if (tracking_inliers_ > num_features_tracking_) {
+    if (tracking_inliers_ > num_features_tracking_)
+    {
         // tracking good
         status_ = FrontendStatus::TRACKING_GOOD;
-    } else if (tracking_inliers_ > num_features_tracking_bad_) {
+    }
+    else if (tracking_inliers_ > num_features_tracking_bad_)
+    {
         // tracking bad
         status_ = FrontendStatus::TRACKING_BAD;
-    } else {
+    }
+    else
+    {
         // lost
         status_ = FrontendStatus::LOST;
     }
@@ -64,12 +75,15 @@ bool Frontend::Track() {
     InsertKeyframe();
     relative_motion_ = current_frame_->Pose() * last_frame_->Pose().inverse();
 
-    if (viewer_) viewer_->AddCurrentFrame(current_frame_);
+    if (viewer_)
+        viewer_->AddCurrentFrame(current_frame_);
     return true;
 }
 
-bool Frontend::InsertKeyframe() {
-    if (tracking_inliers_ >= num_features_needed_for_keyframe_) {
+bool Frontend::InsertKeyframe()
+{
+    if (tracking_inliers_ >= num_features_needed_for_keyframe_)
+    {
         // still have enough features, don't insert keyframe
         return false;
     }
@@ -81,7 +95,7 @@ bool Frontend::InsertKeyframe() {
               << current_frame_->keyframe_id_;
 
     SetObservationsForKeyFrame();
-    DetectFeatures();  // detect new features
+    DetectFeatures(); // detect new features
 
     // track in right image
     FindFeaturesInRight();
@@ -90,25 +104,32 @@ bool Frontend::InsertKeyframe() {
     // update backend because we have a new keyframe
     backend_->UpdateMap();
 
-    if (viewer_) viewer_->UpdateMap();
+    if (viewer_)
+        viewer_->UpdateMap();
 
     return true;
 }
 
-void Frontend::SetObservationsForKeyFrame() {
-    for (auto &feat : current_frame_->features_left_) {
+void Frontend::SetObservationsForKeyFrame()
+{
+    for (auto &feat : current_frame_->features_left_)
+    {
         auto mp = feat->map_point_.lock();
-        if (mp) mp->AddObservation(feat);
+        if (mp)
+            mp->AddObservation(feat);
     }
 }
 
-int Frontend::TriangulateNewPoints() {
+int Frontend::TriangulateNewPoints()
+{
     std::vector<SE3> poses{camera_left_->pose(), camera_right_->pose()};
     SE3 current_pose_Twc = current_frame_->Pose().inverse();
     int cnt_triangulated_pts = 0;
-    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i) {
+    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i)
+    {
         if (current_frame_->features_left_[i]->map_point_.expired() &&
-            current_frame_->features_right_[i] != nullptr) {
+            current_frame_->features_right_[i] != nullptr)
+        {
             // 左图的特征点未关联地图点且存在右图匹配点，尝试三角化
             std::vector<Vec3> points{
                 camera_left_->pixel2camera(
@@ -119,7 +140,8 @@ int Frontend::TriangulateNewPoints() {
                          current_frame_->features_right_[i]->position_.pt.y))};
             Vec3 pworld = Vec3::Zero();
 
-            if (triangulation(poses, points, pworld) && pworld[2] > 0) {
+            if (triangulation(poses, points, pworld))
+            {
                 auto new_map_point = MapPoint::CreateNewMappoint();
                 pworld = current_pose_Twc * pworld;
                 new_map_point->SetPos(pworld);
@@ -139,7 +161,8 @@ int Frontend::TriangulateNewPoints() {
     return cnt_triangulated_pts;
 }
 
-int Frontend::EstimateCurrentPose() {
+int Frontend::EstimateCurrentPose()
+{
     // setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
     typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType>
@@ -151,7 +174,7 @@ int Frontend::EstimateCurrentPose() {
     optimizer.setAlgorithm(solver);
 
     // vertex
-    VertexPose *vertex_pose = new VertexPose();  // camera vertex_pose
+    VertexPose *vertex_pose = new VertexPose(); // camera vertex_pose
     vertex_pose->setId(0);
     vertex_pose->setEstimate(current_frame_->Pose());
     optimizer.addVertex(vertex_pose);
@@ -163,9 +186,11 @@ int Frontend::EstimateCurrentPose() {
     int index = 1;
     std::vector<EdgeProjectionPoseOnly *> edges;
     std::vector<Feature::Ptr> features;
-    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i) {
+    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i)
+    {
         auto mp = current_frame_->features_left_[i]->map_point_.lock();
-        if (mp) {
+        if (mp)
+        {
             features.push_back(current_frame_->features_left_[i]);
             EdgeProjectionPoseOnly *edge =
                 new EdgeProjectionPoseOnly(mp->pos_, K);
@@ -184,28 +209,35 @@ int Frontend::EstimateCurrentPose() {
     // estimate the Pose the determine the outliers
     const double chi2_th = 5.991;
     int cnt_outlier = 0;
-    for (int iteration = 0; iteration < 4; ++iteration) {
+    for (int iteration = 0; iteration < 4; ++iteration)
+    {
         vertex_pose->setEstimate(current_frame_->Pose());
         optimizer.initializeOptimization();
         optimizer.optimize(10);
         cnt_outlier = 0;
 
         // count the outliers
-        for (size_t i = 0; i < edges.size(); ++i) {
+        for (size_t i = 0; i < edges.size(); ++i)
+        {
             auto e = edges[i];
-            if (features[i]->is_outlier_) {
+            if (features[i]->is_outlier_)
+            {
                 e->computeError();
             }
-            if (e->chi2() > chi2_th) {
+            if (e->chi2() > chi2_th)
+            {
                 features[i]->is_outlier_ = true;
                 e->setLevel(1);
                 cnt_outlier++;
-            } else {
+            }
+            else
+            {
                 features[i]->is_outlier_ = false;
                 e->setLevel(0);
             };
 
-            if (iteration == 2) {
+            if (iteration == 2)
+            {
                 e->setRobustKernel(nullptr);
             }
         }
@@ -216,29 +248,37 @@ int Frontend::EstimateCurrentPose() {
     // Set pose and outlier
     current_frame_->SetPose(vertex_pose->estimate());
 
-    LOG(INFO) << "Current Pose = \n" << current_frame_->Pose().matrix();
+    LOG(INFO) << "Current Pose = \n"
+              << current_frame_->Pose().matrix();
 
-    for (auto &feat : features) {
-        if (feat->is_outlier_) {
+    for (auto &feat : features)
+    {
+        if (feat->is_outlier_)
+        {
             feat->map_point_.reset();
-            feat->is_outlier_ = false;  // maybe we can still use it in future
+            feat->is_outlier_ = false; // maybe we can still use it in future
         }
     }
     return features.size() - cnt_outlier;
 }
 
-int Frontend::TrackLastFrame() {
+int Frontend::TrackLastFrame()
+{
     // use LK flow to estimate points in the right image
     std::vector<cv::Point2f> kps_last, kps_current;
-    for (auto &kp : last_frame_->features_left_) {
-        if (kp->map_point_.lock()) {
+    for (auto &kp : last_frame_->features_left_)
+    {
+        if (kp->map_point_.lock())
+        {
             // use project point
             auto mp = kp->map_point_.lock();
             auto px =
                 camera_left_->world2pixel(mp->pos_, current_frame_->Pose());
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(cv::Point2f(px[0], px[1]));
-        } else {
+        }
+        else
+        {
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(kp->position_.pt);
         }
@@ -254,8 +294,10 @@ int Frontend::TrackLastFrame() {
 
     int num_good_pts = 0;
 
-    for (size_t i = 0; i < status.size(); ++i) {
-        if (status[i]) {
+    for (size_t i = 0; i < status.size(); ++i)
+    {
+        if (status[i])
+        {
             cv::KeyPoint kp(kps_current[i], 7);
             Feature::Ptr feature(new Feature(current_frame_, kp));
             feature->map_point_ = last_frame_->features_left_[i]->map_point_;
@@ -268,17 +310,21 @@ int Frontend::TrackLastFrame() {
     return num_good_pts;
 }
 
-bool Frontend::StereoInit() {
+bool Frontend::StereoInit()
+{
     int num_features_left = DetectFeatures();
     int num_coor_features = FindFeaturesInRight();
-    if (num_coor_features < num_features_init_) {
+    if (num_coor_features < num_features_init_)
+    {
         return false;
     }
 
     bool build_map_success = BuildInitMap();
-    if (build_map_success) {
+    if (build_map_success)
+    {
         status_ = FrontendStatus::TRACKING_GOOD;
-        if (viewer_) {
+        if (viewer_)
+        {
             viewer_->AddCurrentFrame(current_frame_);
             viewer_->UpdateMap();
         }
@@ -287,9 +333,11 @@ bool Frontend::StereoInit() {
     return false;
 }
 
-int Frontend::DetectFeatures() {
+int Frontend::DetectFeatures()
+{
     cv::Mat mask(current_frame_->left_img_.size(), CV_8UC1, 255);
-    for (auto &feat : current_frame_->features_left_) {
+    for (auto &feat : current_frame_->features_left_)
+    {
         cv::rectangle(mask, feat->position_.pt - cv::Point2f(10, 10),
                       feat->position_.pt + cv::Point2f(10, 10), 0, CV_FILLED);
     }
@@ -297,28 +345,33 @@ int Frontend::DetectFeatures() {
     std::vector<cv::KeyPoint> keypoints;
     gftt_->detect(current_frame_->left_img_, keypoints, mask);
     int cnt_detected = 0;
-    for (auto &kp : keypoints) {
+    for (auto &kp : keypoints)
+    {
         current_frame_->features_left_.push_back(
             Feature::Ptr(new Feature(current_frame_, kp)));
         cnt_detected++;
     }
-
     LOG(INFO) << "Detect " << cnt_detected << " new features";
     return cnt_detected;
 }
 
-int Frontend::FindFeaturesInRight() {
+int Frontend::FindFeaturesInRight()
+{
     // use LK flow to estimate points in the right image
     std::vector<cv::Point2f> kps_left, kps_right;
-    for (auto &kp : current_frame_->features_left_) {
+    for (auto &kp : current_frame_->features_left_)
+    {
         kps_left.push_back(kp->position_.pt);
         auto mp = kp->map_point_.lock();
-        if (mp) {
+        if (mp)
+        {
             // use projected points as initial guess
             auto px =
                 camera_right_->world2pixel(mp->pos_, current_frame_->Pose());
             kps_right.push_back(cv::Point2f(px[0], px[1]));
-        } else {
+        }
+        else
+        {
             // use same pixel in left iamge
             kps_right.push_back(kp->position_.pt);
         }
@@ -334,26 +387,45 @@ int Frontend::FindFeaturesInRight() {
         cv::OPTFLOW_USE_INITIAL_FLOW);
 
     int num_good_pts = 0;
-    for (size_t i = 0; i < status.size(); ++i) {
-        if (status[i]) {
+
+    //DEBUG
+    cv::Mat img_out;
+    cv::vconcat(current_frame_->left_img_, current_frame_->right_img_, img_out);
+    int height = current_frame_->left_img_.rows;
+    for (size_t i = 0; i < status.size(); ++i)
+    {
+        if (status[i])
+        {
             cv::KeyPoint kp(kps_right[i], 7);
             Feature::Ptr feat(new Feature(current_frame_, kp));
             feat->is_on_left_image_ = false;
             current_frame_->features_right_.push_back(feat);
+            cv::circle(img_out, kps_left[i], 2, cv::Scalar(0, 250, 0), 2);
+            auto p = kps_right[i];
+            p.y += height;
+            cv::circle(img_out, p, 2, cv::Scalar(0, 250, 0), 2);
+            cv::arrowedLine(img_out, kps_left[i], p, cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
             num_good_pts++;
-        } else {
+        }
+        else
+        {
             current_frame_->features_right_.push_back(nullptr);
         }
     }
+    // cv::imshow("debug 1", img_out);
+    // cv::waitKey(2);
     LOG(INFO) << "Find " << num_good_pts << " in the right image.";
     return num_good_pts;
 }
 
-bool Frontend::BuildInitMap() {
+bool Frontend::BuildInitMap()
+{
     std::vector<SE3> poses{camera_left_->pose(), camera_right_->pose()};
     size_t cnt_init_landmarks = 0;
-    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i) {
-        if (current_frame_->features_right_[i] == nullptr) continue;
+    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i)
+    {
+        if (current_frame_->features_right_[i] == nullptr)
+            continue;
         // create map point from triangulation
         std::vector<Vec3> points{
             camera_left_->pixel2camera(
@@ -364,7 +436,8 @@ bool Frontend::BuildInitMap() {
                      current_frame_->features_right_[i]->position_.pt.y))};
         Vec3 pworld = Vec3::Zero();
 
-        if (triangulation(poses, points, pworld) && pworld[2] > 0) {
+        if (triangulation(poses, points, pworld))
+        {
             auto new_map_point = MapPoint::CreateNewMappoint();
             new_map_point->SetPos(pworld);
             new_map_point->AddObservation(current_frame_->features_left_[i]);
@@ -385,9 +458,10 @@ bool Frontend::BuildInitMap() {
     return true;
 }
 
-bool Frontend::Reset() {
+bool Frontend::Reset()
+{
     LOG(INFO) << "Reset is not implemented. ";
     return true;
 }
 
-}  // namespace easy_slam
+} // namespace easy_slam
