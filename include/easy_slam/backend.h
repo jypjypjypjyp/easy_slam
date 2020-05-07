@@ -1,24 +1,22 @@
-//
-// Created by gaoxiang on 19-5-2.
-//
-
 #ifndef easy_slam_BACKEND_H
 #define easy_slam_BACKEND_H
 
-#include "easy_slam/common_include.h"
+#include "easy_slam/common.h"
 #include "easy_slam/frame.h"
 #include "easy_slam/map.h"
 
-namespace easy_slam {
+namespace easy_slam
+{
 class Map;
 
 /**
  * 后端
  * 有单独优化线程，在Map更新时启动优化
  * Map更新由前端触发
- */ 
-class Backend {
-   public:
+ */
+class Backend
+{
+public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     typedef std::shared_ptr<Backend> Ptr;
 
@@ -26,9 +24,10 @@ class Backend {
     Backend();
 
     // 设置左右目的相机，用于获得内外参
-    void SetCameras(Camera::Ptr left, Camera::Ptr right) {
-        cam_left_ = left;
-        cam_right_ = right;
+    void SetCameras(Camera::Ptr left, Camera::Ptr right)
+    {
+        camera_left_ = left;
+        camera_right_ = right;
     }
 
     /// 设置地图
@@ -40,12 +39,12 @@ class Backend {
     /// 关闭后端线程
     void Stop();
 
-   private:
+private:
     /// 后端线程
     void BackendLoop();
 
     /// 对给定关键帧和路标点进行优化
-    void Optimize(Map::KeyframesType& keyframes, Map::LandmarksType& landmarks);
+    void Optimize();
 
     std::shared_ptr<Map> map_;
     std::thread backend_thread_;
@@ -54,9 +53,9 @@ class Backend {
     std::condition_variable map_update_;
     std::atomic<bool> backend_running_;
 
-    Camera::Ptr cam_left_ = nullptr, cam_right_ = nullptr;
+    Camera::Ptr camera_left_ = nullptr, camera_right_ = nullptr;
 };
 
-}  // namespace easy_slam
+} // namespace easy_slam
 
-#endif  // easy_slam_BACKEND_H
+#endif // easy_slam_BACKEND_H

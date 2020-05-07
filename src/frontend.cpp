@@ -1,15 +1,11 @@
-//
-// Created by gaoxiang on 19-5-2.
-//
-
 #include <opencv2/opencv.hpp>
 
-#include "easy_slam/algorithm.h"
+#include "easy_slam/utility.h"
 #include "easy_slam/backend.h"
 #include "easy_slam/config.h"
 #include "easy_slam/feature.h"
 #include "easy_slam/frontend.h"
-#include "easy_slam/g2o_types.h"
+#include "easy_slam/ceres_helper/PoseOnlyReprojectionFactor.h"
 #include "easy_slam/map.h"
 #include "easy_slam/viewer.h"
 
@@ -102,7 +98,7 @@ bool Frontend::InsertKeyframe()
     // triangulate map points
     TriangulateNewPoints();
     // update backend because we have a new keyframe
-    backend_->UpdateMap();
+    //backend_->UpdateMap();
 
     if (viewer_)
         viewer_->UpdateMap();
@@ -161,105 +157,66 @@ int Frontend::TriangulateNewPoints()
     return cnt_triangulated_pts;
 }
 
+//TODO
 int Frontend::EstimateCurrentPose()
 {
-    // setup g2o
-    typedef g2o::BlockSolver_6_3 BlockSolverType;
-    typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType>
-        LinearSolverType;
-    auto solver = new g2o::OptimizationAlgorithmLevenberg(
-        g2o::make_unique<BlockSolverType>(
-            g2o::make_unique<LinearSolverType>()));
-    g2o::SparseOptimizer optimizer;
-    optimizer.setAlgorithm(solver);
+    ceres::Problem problem;
+    ceres::Solver::Options options;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+    options.max_num_iterations = 5;
+    ceres::Solver::Summary summary;
+    ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
 
-    // vertex
-    VertexPose *vertex_pose = new VertexPose(); // camera vertex_pose
-    vertex_pose->setId(0);
-    vertex_pose->setEstimate(current_frame_->Pose());
-    optimizer.addVertex(vertex_pose);
-
-    // K
+    // K & left_ext
     Mat33 K = camera_left_->K();
+    SE3 left_ext = camera_left_->pose();
 
-    // edges
-    int index = 1;
-    std::vector<EdgeProjectionPoseOnly *> edges;
-    std::vector<Feature::Ptr> features;
-    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i)
+    double *para = toDouble(current_frame_->Pose());
+    ceres::LocalParameterization *local_parameterization = new ceres::QuaternionParameterization();
+    problem.AddParameterBlock(para, 4, local_parameterization);
+    problem.AddParameterBlock(para + 4, 3);
+
+    int feature_count = 0;
+    for (auto &feature : current_frame_->features_left_)
     {
-        auto mp = current_frame_->features_left_[i]->map_point_.lock();
-        if (mp)
+        auto map_point = feature->map_point_.lock();
+        if (map_point)
         {
-            features.push_back(current_frame_->features_left_[i]);
-            EdgeProjectionPoseOnly *edge =
-                new EdgeProjectionPoseOnly(mp->pos_, K);
-            edge->setId(index);
-            edge->setVertex(0, vertex_pose);
-            edge->setMeasurement(
-                toVec2(current_frame_->features_left_[i]->position_.pt));
-            edge->setInformation(Eigen::Matrix2d::Identity());
-            edge->setRobustKernel(new g2o::RobustKernelHuber);
-            edges.push_back(edge);
-            optimizer.addEdge(edge);
-            index++;
+            feature_count++;
+            ceres::CostFunction *cost_function;
+            cost_function = PoseOnlyReprojectionFactor::Build(toVec2(feature->position_.pt), K, left_ext, map_point->Pos());
+            problem.AddResidualBlock(cost_function, loss_function, para, para + 4);
         }
     }
 
-    // estimate the Pose the determine the outliers
-    const double chi2_th = 5.991;
-    int cnt_outlier = 0;
-    for (int iteration = 0; iteration < 4; ++iteration)
+    ceres::Solve(options, &problem, &summary);
+
+    // reject outlier
+    double error[2] = {0};
+    for (auto &feature : current_frame_->features_left_)
     {
-        vertex_pose->setEstimate(current_frame_->Pose());
-        optimizer.initializeOptimization();
-        optimizer.optimize(10);
-        cnt_outlier = 0;
-
-        // count the outliers
-        for (size_t i = 0; i < edges.size(); ++i)
+        auto map_point = feature->map_point_.lock();
+        if (map_point)
         {
-            auto e = edges[i];
-            if (features[i]->is_outlier_)
+            (PoseOnlyReprojectionFactor(toVec2(feature->position_.pt), K, left_ext, map_point->Pos()))(para, para + 4, error);
+            if (error[0] * error[0] + error[1] * error[1] > 9)
             {
-                e->computeError();
-            }
-            if (e->chi2() > chi2_th)
-            {
-                features[i]->is_outlier_ = true;
-                e->setLevel(1);
-                cnt_outlier++;
-            }
-            else
-            {
-                features[i]->is_outlier_ = false;
-                e->setLevel(0);
-            };
-
-            if (iteration == 2)
-            {
-                e->setRobustKernel(nullptr);
+                feature->map_point_.reset();
+                //NOTE: maybe we can still use it in future
+                feature->is_outlier_ = false;
+                feature_count--;
             }
         }
     }
 
-    LOG(INFO) << "Outlier/Inlier in pose estimating: " << cnt_outlier << "/"
-              << features.size() - cnt_outlier;
     // Set pose and outlier
-    current_frame_->SetPose(vertex_pose->estimate());
+    current_frame_->SetPose(toSE3(para));
+    delete[] para;
 
     LOG(INFO) << "Current Pose = \n"
               << current_frame_->Pose().matrix();
 
-    for (auto &feat : features)
-    {
-        if (feat->is_outlier_)
-        {
-            feat->map_point_.reset();
-            feat->is_outlier_ = false; // maybe we can still use it in future
-        }
-    }
-    return features.size() - cnt_outlier;
+    return feature_count;
 }
 
 int Frontend::TrackLastFrame()
@@ -450,7 +407,7 @@ bool Frontend::BuildInitMap()
     }
     current_frame_->SetKeyFrame();
     map_->InsertKeyFrame(current_frame_);
-    backend_->UpdateMap();
+    //backend_->UpdateMap();
 
     LOG(INFO) << "Initial map created with " << cnt_init_landmarks
               << " map points";

@@ -1,6 +1,6 @@
-#pragma once
-#ifndef easy_slam_COMMON_INCLUDE_H
-#define easy_slam_COMMON_INCLUDE_H
+
+#ifndef easy_slam_COMMON_H
+#define easy_slam_COMMON_H
 
 // std
 #include <atomic>
@@ -113,4 +113,4 @@ using cv::Mat;
 // glog
 #include <glog/logging.h>
 
-#endif  // easy_slam_COMMON_INCLUDE_H
+#endif // easy_slam_COMMON_H

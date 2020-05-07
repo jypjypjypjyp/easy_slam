@@ -61,7 +61,7 @@ Frame::Ptr Dataset::NextFrame()
     {
         LOG(WARNING) << "cannot find images at index " << current_image_index_;
         return nullptr;
-    } 
+    }
 
     auto new_frame = Frame::CreateFrame();
     new_frame->left_img_ = image_left;

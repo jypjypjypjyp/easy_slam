@@ -1,23 +1,26 @@
-#pragma once
+
 #ifndef MAP_H
 #define MAP_H
 
-#include "easy_slam/common_include.h"
+#include "easy_slam/common.h"
 #include "easy_slam/frame.h"
 #include "easy_slam/mappoint.h"
 
-namespace easy_slam {
+namespace easy_slam
+{
 
 /**
  * @brief 地图
  * 和地图的交互：前端调用InsertKeyframe和InsertMapPoint插入新帧和地图点，后端维护地图的结构，判定outlier/剔除等等
  */
-class Map {
-   public:
+class Map
+{
+public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     typedef std::shared_ptr<Map> Ptr;
     typedef std::unordered_map<unsigned long, MapPoint::Ptr> LandmarksType;
     typedef std::unordered_map<unsigned long, Frame::Ptr> KeyframesType;
+    typedef std::unordered_map<unsigned long, double *> ParamsType;
 
     Map() {}
 
@@ -27,46 +30,62 @@ class Map {
     void InsertMapPoint(MapPoint::Ptr map_point);
 
     /// 获取所有地图点
-    LandmarksType GetAllMapPoints() {
+    LandmarksType GetAllMapPoints()
+    {
         std::unique_lock<std::mutex> lck(data_mutex_);
         return landmarks_;
     }
     /// 获取所有关键帧
-    KeyframesType GetAllKeyFrames() {
+    KeyframesType GetAllKeyFrames()
+    {
         std::unique_lock<std::mutex> lck(data_mutex_);
         return keyframes_;
     }
 
     /// 获取激活地图点
-    LandmarksType GetActiveMapPoints() {
+    LandmarksType GetActiveMapPoints()
+    {
         std::unique_lock<std::mutex> lck(data_mutex_);
         return active_landmarks_;
     }
 
     /// 获取激活关键帧
-    KeyframesType GetActiveKeyFrames() {
+    KeyframesType GetActiveKeyFrames()
+    {
         std::unique_lock<std::mutex> lck(data_mutex_);
         return active_keyframes_;
     }
 
+    /// 获取位姿参数数组
+    ParamsType GetPoseParams();
+
+    /// 获取点参数数组
+    ParamsType GetPointParams();
+
+    /// 更新地图并且释放数组
+    void UpdateMap();
+
     /// 清理map中观测数量为零的点
     void CleanMap();
 
-   private:
+private:
     // 将旧的关键帧置为不活跃状态
     void RemoveOldKeyframe();
 
     std::mutex data_mutex_;
-    LandmarksType landmarks_;         // all landmarks
-    LandmarksType active_landmarks_;  // active landmarks
-    KeyframesType keyframes_;         // all key-frames
-    KeyframesType active_keyframes_;  // all key-frames
+    LandmarksType landmarks_;        // all landmarks
+    LandmarksType active_landmarks_; // active landmarks
+    KeyframesType keyframes_;        // all key-frames
+    KeyframesType active_keyframes_; // all key-frames
+
+    std::unordered_map<unsigned long, double *> para_Pose;
+    std::unordered_map<unsigned long, double *> para_Point;
 
     Frame::Ptr current_frame_ = nullptr;
 
     // settings
-    int num_active_keyframes_ = 7;  // 激活的关键帧数量
+    int num_active_keyframes_ = 7; // 激活的关键帧数量
 };
-}  // namespace easy_slam
+} // namespace easy_slam
 
-#endif  // MAP_H
+#endif // MAP_H

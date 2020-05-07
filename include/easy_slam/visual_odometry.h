@@ -1,24 +1,26 @@
-#pragma once
+
 #ifndef easy_slam_VISUAL_ODOMETRY_H
 #define easy_slam_VISUAL_ODOMETRY_H
 
 #include "easy_slam/backend.h"
-#include "easy_slam/common_include.h"
+#include "easy_slam/common.h"
 #include "easy_slam/dataset.h"
 #include "easy_slam/frontend.h"
 #include "easy_slam/viewer.h"
 
-namespace easy_slam {
+namespace easy_slam
+{
 
 /**
  * VO 对外接口
  */
-class VisualOdometry {
-   public:
+class VisualOdometry
+{
+public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     typedef std::shared_ptr<VisualOdometry> Ptr;
 
-    /// constructor with config file
+    /// conclassor with config file
     VisualOdometry(std::string &config_path);
 
     /**
@@ -40,7 +42,7 @@ class VisualOdometry {
     /// 获取前端状态
     FrontendStatus GetFrontendStatus() const { return frontend_->GetStatus(); }
 
-   private:
+private:
     bool inited_ = false;
     std::string config_file_path_;
 
@@ -52,6 +54,6 @@ class VisualOdometry {
     // dataset
     Dataset::Ptr dataset_ = nullptr;
 };
-}  // namespace easy_slam
+} // namespace easy_slam
 
-#endif  // easy_slam_VISUAL_ODOMETRY_H
+#endif // easy_slam_VISUAL_ODOMETRY_H

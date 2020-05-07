@@ -1,9 +1,9 @@
-#pragma once
+
 
 #ifndef easy_slam_CAMERA_H
 #define easy_slam_CAMERA_H
 
-#include "easy_slam/common_include.h"
+#include "easy_slam/common.h"
 
 namespace easy_slam {
 

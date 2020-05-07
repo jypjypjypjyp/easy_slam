@@ -4,7 +4,6 @@ add_library(easy_slam SHARED
         map.cpp
         camera.cpp
         config.cpp
-        feature.cpp
         frontend.cpp
         backend.cpp
         viewer.cpp
@@ -13,3 +12,4 @@ add_library(easy_slam SHARED
 
 target_link_libraries(easy_slam
         ${THIRD_PARTY_LIBS})
+target_compile_features(easy_slam PRIVATE cxx_std_17)
