@@ -1,7 +1,8 @@
 #include "easy_slam/backend.h"
 #include "easy_slam/utility.h"
 #include "easy_slam/feature.h"
-#include "easy_slam/ceres_helper/ReprojectionFactor.h"
+#include "easy_slam/ceres_helper/reprojection_error.hpp"
+#include "easy_slam/ceres_helper/se3_parameterization.hpp"
 #include "easy_slam/map.h"
 #include "easy_slam/mappoint.h"
 
@@ -50,16 +51,10 @@ void Backend::Optimize()
     ceres::Problem problem;
     ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
 
-    // K & left_ext & right_ext
-    Mat33 K = camera_left_->K();
-    SE3 left_ext = camera_left_->pose();
-    SE3 right_ext = camera_right_->pose();
-
-    ceres::LocalParameterization *local_parameterization = new ceres::QuaternionParameterization();
+    ceres::LocalParameterization *local_parameterization = new SE3Parameterization();
     for (auto &para : para_kfs)
     {
-        problem.AddParameterBlock(para.second, 4, local_parameterization);
-        problem.AddParameterBlock(para.second + 4, 3);
+        problem.AddParameterBlock(para.second, SE3::num_parameters, local_parameterization);
     }
 
     for (auto &landmark : active_landmarks)
@@ -85,11 +80,11 @@ void Backend::Optimize()
             ceres::CostFunction *cost_function;
             if (feature->is_on_left_image_)
             {
-                cost_function = ReprojectionFactor::Build(toVec2(feature->position_.pt), K, left_ext);
+                cost_function = new ReprojectionError(toVec2(feature->position_.pt), camera_left_);
             }
             else
             {
-                cost_function = ReprojectionFactor::Build(toVec2(feature->position_.pt), K, right_ext);
+                cost_function = new ReprojectionError(toVec2(feature->position_.pt), camera_right_);
             }
             problem.AddResidualBlock(cost_function, loss_function, para_kfs[keyframe.first], para_kfs[keyframe.first] + 4, para);
         }
@@ -102,7 +97,6 @@ void Backend::Optimize()
     ceres::Solve(options, &problem, &summary);
 
     // reject outliers
-    double error[2] = {0};
     for (auto &landmark : active_landmarks)
     {
         if (landmark.second->is_outlier_)
@@ -112,31 +106,22 @@ void Backend::Optimize()
         {
             if (obs.lock() == nullptr)
                 continue;
-            auto feat = obs.lock();
-            if (feat->is_outlier_ || feat->frame_.lock() == nullptr)
+            auto feature = obs.lock();
+            if (feature->is_outlier_ || feature->frame_.lock() == nullptr)
                 continue;
-            auto frame = feat->frame_.lock();
+            auto frame = feature->frame_.lock();
             auto iter = active_kfs.find(frame->keyframe_id_);
             if (iter == active_kfs.end())
                 continue;
-            auto keyframe = *iter;
+            auto keyframe = (*iter).second;
 
-            if (feat->is_on_left_image_)
+            Vec2 error = toVec2(feature->position_.pt) - camera_left_->world2pixel(landmark.second->Pos(), keyframe->Pose());
+            if (error[0] * error[0] + error[1] * error[1] > 9)
             {
-                (ReprojectionFactor(toVec2(feat->position_.pt), K, left_ext))(para_kfs[keyframe.first], para_landmarks[landmark.first], error);
-            }
-            else
-            {
-                (ReprojectionFactor(toVec2(feat->position_.pt), K, right_ext))(para_kfs[keyframe.first], para_landmarks[landmark.first], error);
-            }
-            if (error[0] > 3 || error[1] > 3)
-            {
-                landmark.second->RemoveObservation(feat);
+                landmark.second->RemoveObservation(feature);
             }
         }
     }
-
-    map_->UpdateMap();
 }
 
 } // namespace easy_slam

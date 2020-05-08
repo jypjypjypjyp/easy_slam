@@ -41,49 +41,6 @@ inline bool triangulation(const std::vector<SE3> &poses,
 // converters
 inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); }
 
-inline Vec3 toVec3(double *p)
-{
-    return Vec3(p[0], p[1], p[2]);
-}
-
-inline double *toDouble(const Vec3 pose)
-{
-    double *array = new double[3];
-    array[0] = pose.x();
-    array[1] = pose.y();
-    array[2] = pose.z();
-    return array;
-}
-
-inline double *toDouble(const SE3 pose)
-{
-    Eigen::Quaterniond q = pose.unit_quaternion();
-    Vec3 t = pose.translation();
-    double *array = new double[7];
-    array[0] = q.x();
-    array[1] = q.y();
-    array[2] = q.z();
-    array[3] = q.w();
-    array[4] = t.x();
-    array[5] = t.y();
-    array[6] = t.z();
-    return array;
-}
-
-inline SE3 toSE3(double *array)
-{
-    Eigen::Quaterniond q(array[0], array[1], array[2], array[3]);
-    Vec3 t(array[4], array[5], array[6]);
-    return SE3(q, t);
-}
-
-inline Vec2 ReprojectionError(Vec2 observation, Mat33 K, SE3 camera_ext, SE3 pose, Vec3 point)
-{
-    Vec3 pos_pixel = K * (camera_ext * (pose * point));
-    pos_pixel /= pos_pixel[2];
-    return observation - pos_pixel.head<2>();
-}
-
 } // namespace easy_slam
 
 #endif // easy_slam_UTILITY_H

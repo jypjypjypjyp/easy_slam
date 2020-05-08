@@ -5,7 +5,8 @@
 #include "easy_slam/config.h"
 #include "easy_slam/feature.h"
 #include "easy_slam/frontend.h"
-#include "easy_slam/ceres_helper/PoseOnlyReprojectionFactor.h"
+#include "easy_slam/ceres_helper/pose_only_reprojection_error.hpp"
+#include "easy_slam/ceres_helper/se3_parameterization.hpp"
 #include "easy_slam/map.h"
 #include "easy_slam/viewer.h"
 
@@ -167,14 +168,9 @@ int Frontend::EstimateCurrentPose()
     ceres::Solver::Summary summary;
     ceres::LossFunction *loss_function = new ceres::HuberLoss(1.0);
 
-    // K & left_ext
-    Mat33 K = camera_left_->K();
-    SE3 left_ext = camera_left_->pose();
-
-    double *para = toDouble(current_frame_->Pose());
-    ceres::LocalParameterization *local_parameterization = new ceres::QuaternionParameterization();
-    problem.AddParameterBlock(para, 4, local_parameterization);
-    problem.AddParameterBlock(para + 4, 3);
+    double *para = current_frame_->Pose().data();
+    ceres::LocalParameterization *local_parameterization = new SE3Parameterization();
+    problem.AddParameterBlock(para, SE3::num_parameters, local_parameterization);
 
     int feature_count = 0;
     for (auto &feature : current_frame_->features_left_)
@@ -184,21 +180,20 @@ int Frontend::EstimateCurrentPose()
         {
             feature_count++;
             ceres::CostFunction *cost_function;
-            cost_function = PoseOnlyReprojectionFactor::Build(toVec2(feature->position_.pt), K, left_ext, map_point->Pos());
-            problem.AddResidualBlock(cost_function, loss_function, para, para + 4);
+            cost_function = new PoseOnlyReprojectionError(toVec2(feature->position_.pt), camera_left_, map_point->Pos());
+            problem.AddResidualBlock(cost_function, loss_function, para);
         }
     }
 
     ceres::Solve(options, &problem, &summary);
 
-    // reject outlier
-    double error[2] = {0};
+    // reject outliers
     for (auto &feature : current_frame_->features_left_)
     {
         auto map_point = feature->map_point_.lock();
         if (map_point)
         {
-            (PoseOnlyReprojectionFactor(toVec2(feature->position_.pt), K, left_ext, map_point->Pos()))(para, para + 4, error);
+            Vec2 error = toVec2(feature->position_.pt) - camera_left_->world2pixel(map_point->Pos(),current_frame_->Pose());
             if (error[0] * error[0] + error[1] * error[1] > 9)
             {
                 feature->map_point_.reset();
@@ -208,10 +203,6 @@ int Frontend::EstimateCurrentPose()
             }
         }
     }
-
-    // Set pose and outlier
-    current_frame_->SetPose(toSE3(para));
-    delete[] para;
 
     LOG(INFO) << "Current Pose = \n"
               << current_frame_->Pose().matrix();

@@ -107,7 +107,7 @@ Map::ParamsType Map::GetPoseParams()
     std::unique_lock<std::mutex> lck(data_mutex_);
     for (auto keyframe : active_keyframes_)
     {
-        para_Pose[keyframe.first] = toDouble(keyframe.second->Pose());
+        para_Pose[keyframe.first] = keyframe.second->Pose().data();
     }
     return para_Pose;
 }
@@ -117,25 +117,9 @@ Map::ParamsType Map::GetPointParams()
     std::unique_lock<std::mutex> lck(data_mutex_);
     for (auto landmark : active_landmarks_)
     {
-        para_Point[landmark.first] = toDouble(landmark.second->Pos());
+        para_Point[landmark.first] = landmark.second->Pos().data();
     }
     return para_Point;
-}
-
-void Map::UpdateMap()
-{
-    for (auto para : para_Pose)
-    {
-        active_keyframes_[para.first]->SetPose(toSE3(para.second));
-        delete[](para.second);
-    }
-    for (auto para : para_Point)
-    {
-        active_landmarks_[para.first]->SetPos(toVec3(para.second));
-        delete[](para.second);
-    }
-    para_Pose.clear();
-    para_Point.clear();
 }
 
 void Map::CleanMap()

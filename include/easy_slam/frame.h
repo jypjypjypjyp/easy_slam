@@ -43,7 +43,7 @@ public: // data members
           const Mat &right);
 
     // set and get pose, thread safe
-    SE3 Pose()
+    SE3& Pose()
     {
         std::unique_lock<std::mutex> lck(pose_mutex_);
         return pose_;
