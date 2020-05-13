@@ -99,7 +99,7 @@ bool Frontend::InsertKeyframe()
     // triangulate map points
     TriangulateNewPoints();
     // update backend because we have a new keyframe
-    //backend_->UpdateMap();
+    backend_->UpdateMap();
 
     if (viewer_)
         viewer_->UpdateMap();
@@ -337,9 +337,9 @@ int Frontend::FindFeaturesInRight()
     int num_good_pts = 0;
 
     //DEBUG
-    cv::Mat img_out;
-    cv::vconcat(current_frame_->left_img_, current_frame_->right_img_, img_out);
-    int height = current_frame_->left_img_.rows;
+    // cv::Mat img_out;
+    // cv::vconcat(current_frame_->left_img_, current_frame_->right_img_, img_out);
+    // int height = current_frame_->left_img_.rows;
     for (size_t i = 0; i < status.size(); ++i)
     {
         if (status[i])
@@ -348,11 +348,11 @@ int Frontend::FindFeaturesInRight()
             Feature::Ptr feat(new Feature(current_frame_, kp));
             feat->is_on_left_image_ = false;
             current_frame_->features_right_.push_back(feat);
-            cv::circle(img_out, kps_left[i], 2, cv::Scalar(0, 250, 0), 2);
-            auto p = kps_right[i];
-            p.y += height;
-            cv::circle(img_out, p, 2, cv::Scalar(0, 250, 0), 2);
-            cv::arrowedLine(img_out, kps_left[i], p, cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
+            // cv::circle(img_out, kps_left[i], 2, cv::Scalar(0, 250, 0), 2);
+            // auto p = kps_right[i];
+            // p.y += height;
+            // cv::circle(img_out, p, 2, cv::Scalar(0, 250, 0), 2);
+            // cv::arrowedLine(img_out, kps_left[i], p, cv::Scalar(0, 255, 0), 1, 8, 0, 0.2);
             num_good_pts++;
         }
         else
@@ -398,7 +398,7 @@ bool Frontend::BuildInitMap()
     }
     current_frame_->SetKeyFrame();
     map_->InsertKeyFrame(current_frame_);
-    //backend_->UpdateMap();
+    backend_->UpdateMap();
 
     LOG(INFO) << "Initial map created with " << cnt_init_landmarks
               << " map points";

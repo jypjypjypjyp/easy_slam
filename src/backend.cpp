@@ -86,7 +86,7 @@ void Backend::Optimize()
             {
                 cost_function = new ReprojectionError(toVec2(feature->position_.pt), camera_right_);
             }
-            problem.AddResidualBlock(cost_function, loss_function, para_kfs[keyframe.first], para_kfs[keyframe.first] + 4, para);
+            problem.AddResidualBlock(cost_function, loss_function, para_kfs[keyframe.first], para);
         }
     }
 

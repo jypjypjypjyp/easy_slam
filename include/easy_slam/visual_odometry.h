@@ -1,4 +1,3 @@
-
 #ifndef easy_slam_VISUAL_ODOMETRY_H
 #define easy_slam_VISUAL_ODOMETRY_H
 
