@@ -1,3 +1,4 @@
+
 #ifndef easy_slam_VISUAL_ODOMETRY_H
 #define easy_slam_VISUAL_ODOMETRY_H
 
@@ -10,9 +11,6 @@
 namespace easy_slam
 {
 
-/**
- * VO 对外接口
- */
 class VisualOdometry
 {
 public:
@@ -38,7 +36,6 @@ public:
      */
     bool Step();
 
-    /// 获取前端状态
     FrontendStatus GetFrontendStatus() const { return frontend_->GetStatus(); }
 
 private:

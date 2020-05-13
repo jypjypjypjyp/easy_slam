@@ -1,10 +1,10 @@
-#ifndef easy_slam_SE3_PARAMETERIZATION_H
-#define easy_slam_SE3_PARAMETERIZATION_H
+#ifndef lvio_fusion_SE3_PARAMETERIZATION_H
+#define lvio_fusion_SE3_PARAMETERIZATION_H
 
 #include <ceres/ceres.h>
-#include "easy_slam/common.h"
+#include "lvio_fusion/common.h"
 
-namespace easy_slam
+namespace lvio_fusion
 {
 class SE3Parameterization : public ceres::LocalParameterization
 {
@@ -47,6 +47,6 @@ public:
     virtual int LocalSize() const {return SE3::DoF; }
 };
 
-} // namespace easy_slam
+} // namespace lvio_fusion
 
-#endif // easy_slam_SE3_PARAMETERIZATION_H
+#endif // lvio_fusion_SE3_PARAMETERIZATION_H

@@ -11,9 +11,6 @@
 namespace easy_slam
 {
 
-/**
- * 可视化
- */
 class Viewer
 {
 public:
@@ -26,10 +23,8 @@ public:
 
     void Close();
 
-    // 增加一个当前帧
     void AddCurrentFrame(Frame::Ptr current_frame);
 
-    // 更新地图
     void UpdateMap();
 
 private:

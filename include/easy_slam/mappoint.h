@@ -11,10 +11,6 @@ class Frame;
 
 class Feature;
 
-/**
- * 路标点类
- * 特征点在三角化之后形成路标点
- */
 class MapPoint
 {
 public:

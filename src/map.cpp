@@ -43,7 +43,7 @@ void Map::RemoveOldKeyframe()
 {
     if (current_frame_ == nullptr)
         return;
-    // 寻找与当前帧最近与最远的两个关键帧
+    // find the nearest and furthest frame of the current frame
     double max_dis = 0, min_dis = 9999;
     double max_kf_id = 0, min_kf_id = 0;
     auto Twc = current_frame_->Pose().inverse();
@@ -64,16 +64,16 @@ void Map::RemoveOldKeyframe()
         }
     }
 
-    const double min_dis_th = 0.2; // 最近阈值
+    const double min_dis_th = 0.2;
     Frame::Ptr frame_to_remove = nullptr;
     if (min_dis < min_dis_th)
     {
-        // 如果存在很近的帧，优先删掉最近的
+        // if there is a near frame, remove the nearest first
         frame_to_remove = keyframes_.at(min_kf_id);
     }
     else
     {
-        // 删掉最远的
+        // remove the furthest
         frame_to_remove = keyframes_.at(max_kf_id);
     }
 

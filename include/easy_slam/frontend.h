@@ -22,10 +22,6 @@ enum class FrontendStatus
     LOST
 };
 
-/**
- * 前端
- * 估计当前帧Pose，在满足关键帧条件时向地图加入关键帧并触发优化
- */
 class Frontend
 {
 public:
@@ -34,10 +30,8 @@ public:
 
     Frontend();
 
-    /// 外部接口，添加一个帧并计算其定位结果
     bool AddFrame(Frame::Ptr frame);
 
-    /// Set函数
     void SetMap(Map::Ptr map) { map_ = map; }
 
     void SetBackend(std::shared_ptr<Backend> backend) { backend_ = backend; }

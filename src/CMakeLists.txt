@@ -1,4 +1,4 @@
-add_library(easy_slam SHARED
+add_library(lvio_fusion SHARED
         frame.cpp
         mappoint.cpp
         map.cpp
@@ -10,6 +10,6 @@ add_library(easy_slam SHARED
         visual_odometry.cpp
         dataset.cpp)
 
-target_link_libraries(easy_slam
+target_link_libraries(lvio_fusion
         ${THIRD_PARTY_LIBS})
-target_compile_features(easy_slam PRIVATE cxx_std_17)
+target_compile_features(lvio_fusion PRIVATE cxx_std_17)

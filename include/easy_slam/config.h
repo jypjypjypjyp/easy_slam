@@ -7,11 +7,6 @@
 namespace easy_slam
 {
 
-/**
- * 配置类，使用SetParameterFile确定配置文件
- * 然后用Get得到对应值
- * 单例模式
- */
 class Config
 {
 private:

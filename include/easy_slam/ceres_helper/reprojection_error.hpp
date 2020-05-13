@@ -1,11 +1,11 @@
-#ifndef easy_slam_REPROJECTION_ERROR_H
-#define easy_slam_REPROJECTION_ERROR_H
+#ifndef lvio_fusion_REPROJECTION_ERROR_H
+#define lvio_fusion_REPROJECTION_ERROR_H
 
 #include <ceres/ceres.h>
-#include "easy_slam/utility.h"
-#include "easy_slam/camera.h"
+#include "lvio_fusion/utility.h"
+#include "lvio_fusion/camera.h"
 
-namespace easy_slam
+namespace lvio_fusion
 {
 
 class ReprojectionError : public ceres::SizedCostFunction<2, 7, 3>
@@ -59,6 +59,6 @@ private:
     Mat22 sqrt_information_;
 };
 
-} // namespace easy_slam
+} // namespace lvio_fusion
 
-#endif // easy_slam_POSE_ONLY_REPROJECTION_ERROR_H
+#endif // lvio_fusion_POSE_ONLY_REPROJECTION_ERROR_H

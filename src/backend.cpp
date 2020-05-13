@@ -34,13 +34,10 @@ void Backend::BackendLoop()
     {
         std::unique_lock<std::mutex> lock(data_mutex_);
         map_update_.wait(lock);
-
-        /// 后端仅优化激活的Frames和Landmarks
         Optimize();
     }
 }
 
-//TODO: update with ceres
 void Backend::Optimize()
 {
     Map::ParamsType para_kfs = map_->GetPoseParams();
