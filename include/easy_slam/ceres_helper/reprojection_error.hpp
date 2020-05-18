@@ -49,9 +49,6 @@ public:
             {
                 Eigen::Map<Eigen::Matrix<double, 2, 3, Eigen::RowMajor>> jacobian(jacobians[1]);
                 Eigen::Matrix3d R = camera_->pose().rotationMatrix() * Tcw.rotationMatrix();
-                LOG(INFO) << jaco_res_2_Pc;
-                LOG(INFO) << R;
-                LOG(INFO) << sqrt_information_;
                 jacobian = sqrt_information_ * jaco_res_2_Pc * R;
             }
         }
