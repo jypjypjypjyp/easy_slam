@@ -1,11 +1,11 @@
-#ifndef lvio_fusion_REPROJECTION_ERROR_H
-#define lvio_fusion_REPROJECTION_ERROR_H
+#ifndef easy_slam_REPROJECTION_ERROR_H
+#define easy_slam_REPROJECTION_ERROR_H
 
+#include "easy_slam/camera.h"
+#include "easy_slam/utility.h"
 #include <ceres/ceres.h>
-#include "lvio_fusion/utility.h"
-#include "lvio_fusion/camera.h"
 
-namespace lvio_fusion
+namespace easy_slam
 {
 
 class ReprojectionError : public ceres::SizedCostFunction<2, 7, 3>
@@ -31,12 +31,13 @@ public:
 
         if (jacobians)
         {
+            Eigen::Matrix<double, 2, 3> jaco_res_2_Pc;
+            jaco_res_2_Pc << -camera_->fx_ / P_c(2), 0, camera_->fx_ * P_c(0) / (P_c(2) * P_c(2)),
+                0, -camera_->fy_ / P_c(2), camera_->fy_ * P_c(1) / (P_c(2) * P_c(2));
             if (jacobians[0])
             {
                 Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian(jacobians[0]);
-                Eigen::Matrix<double, 2, 3> jaco_res_2_Pc;
-                jaco_res_2_Pc << -camera_->fx_ / P_c(2), 0, camera_->fx_ * P_c(0) / (P_c(2) * P_c(2)),
-                    0, -camera_->fy_ / P_c(2), camera_->fy_ * P_c(1) / (P_c(2) * P_c(2));
+
                 Eigen::Matrix<double, 3, 7> jaco_Pc_2_Pose;
                 jaco_Pc_2_Pose.setZero();
                 jaco_Pc_2_Pose.block<3, 3>(0, 0) = -Sophus::SO3d::hat(P_c);
@@ -46,7 +47,12 @@ public:
             }
             if (jacobians[1])
             {
-                
+                Eigen::Map<Eigen::Matrix<double, 2, 3, Eigen::RowMajor>> jacobian(jacobians[1]);
+                Eigen::Matrix3d R = camera_->pose().rotationMatrix() * Tcw.rotationMatrix();
+                LOG(INFO) << jaco_res_2_Pc;
+                LOG(INFO) << R;
+                LOG(INFO) << sqrt_information_;
+                jacobian = sqrt_information_ * jaco_res_2_Pc * R;
             }
         }
 
@@ -59,6 +65,6 @@ private:
     Mat22 sqrt_information_;
 };
 
-} // namespace lvio_fusion
+} // namespace easy_slam
 
-#endif // lvio_fusion_POSE_ONLY_REPROJECTION_ERROR_H
+#endif // easy_slam_POSE_ONLY_REPROJECTION_ERROR_H
